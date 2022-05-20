@@ -209,21 +209,62 @@ router.get("/removeAll/:id", async function (req, res, next) {
 
 // GET: checkout form with csrf token
 router.get("/checkout", middleware.isLoggedIn, async (req, res) => {
+
   const errorMsg = req.flash("error")[0];
 
   if (!req.session.cart) {
     return res.redirect("/shopping-cart");
   }
   //load the cart with the session's cart's id from the db
+
   cart = await Cart.findById(req.session.cart._id);
 
+
   const errMsg = req.flash("error")[0];
-  res.render("shop/checkout", {
-    total: cart.totalCost,
-    csrfToken: req.csrfToken(),
-    errorMsg,
-    pageName: "Checkout",
-  });
+  // res.render("shop/checkout", {
+  //    key: process.env.key_id ,
+  //   total: cart.totalCost,
+  //   // csrfToken: req.csrfToken(),
+  //   errorMsg,
+  //   pageName: "Checkout",
+  // });
+  res.render("shop/checkout",
+   { key: process.env.key_id,
+        total: cart.totalCost, 
+        pageName: "Checkout",
+      });
+});
+
+// router.get("/checkout", middleware.isLoggedIn, async (req, res) => {
+//   cart = await Cart.findById(req.session.cart._id);
+//   res.render("checkout", { key: process.env.key_id,
+//     total: cart.totalCost, });
+// });
+router.post("/api/checkout/order", (req, res) => {
+  params = req.body;
+  instance.orders
+    .create(params)
+    .then((data) => {
+      res.send({ sub: data, status: "success" });
+    })
+    .catch((error) => {
+      res.send({ sub: error, status: "failed" });
+    });
+});
+
+router.post("/api/checkout/verify", (req, res) => {
+  body = req.body.razorpay_order_id + "|" + req.body.razorpay_payment_id;
+
+  var expectedSignature = crypto
+    .createHmac("sha256", process.env.KEY_SECRET)
+    .update(body.toString())
+    .digest("hex");
+  console.log("sig" + req.body.razorpay_signature);
+  console.log("sig" + expectedSignature);
+  var response = { status: "failure" };
+  if (expectedSignature === req.body.razorpay_signature)
+    response = { status: "success" };
+  res.send(response);
 });
 
 // POST: handle checkout logic and payment using Stripe
@@ -273,43 +314,43 @@ router.get("/checkout", middleware.isLoggedIn, async (req, res) => {
 
 /////////////////////////////////////////////////////////////////////////////
 
-router.post('/checkout', async(req, res)=> {
-  const cart = await Cart.findById(req.session.cart._id);
-	params = {
-		amount: cart.totalCost * 100,
-		currency: "INR",
-		receipt: nanoid(),
-		payment_capture: "1"
-	}
-	razorPayInstance.orders.create(params)
-	.then(async (response) => {
-		const razorpayKeyId = process.env.RAZORPAY_KEY_ID
-		// Save orderId and other payment details
-		const paymentDetail = new PaymentDetail({
-			orderId: response.id,
-			receiptId: response.receipt,
-			amount: response.amount,
-			currency: response.currency,
-			createdAt: response.created_at,
-			status: response.status
-		})
-		try {
-			// Render Order Confirmation page if saved succesfully
-			await paymentDetail.save()
-			res.render('shop/checkout', {      //--------------------???????????????????????????????????? @_@
-				title: "Confirm Order",
-				razorpayKeyId: razorpayKeyId,
-				paymentDetail : paymentDetail
-			})
-		} catch (err) {
-			// Throw err if failed to save
-			if (err) throw err;
-		}
-	}).catch((err) => {
-		// Throw err if failed to create order
-		if (err) throw err;
-	})
-});
+// router.post('/checkout', async(req, res)=> {
+//   const cart = await Cart.findById(req.session.cart._id);
+// 	params = {
+// 		amount: cart.totalCost * 100,
+// 		currency: "INR",
+// 		receipt: nanoid(),
+// 		payment_capture: "1"
+// 	}
+// 	razorPayInstance.orders.create(params)
+// 	.then(async (response) => {
+// 		const razorpayKeyId = process.env.RAZORPAY_KEY_ID
+// 		// Save orderId and other payment details
+// 		const paymentDetail = new PaymentDetail({
+// 			orderId: response.id,
+// 			receiptId: response.receipt,
+// 			amount: response.amount,
+// 			currency: response.currency,
+// 			createdAt: response.created_at,
+// 			status: response.status
+// 		})
+// 		try {
+// 			// Render Order Confirmation page if saved succesfully
+// 			await paymentDetail.save()
+// 			res.render('shop/checkout', {      //--------------------???????????????????????????????????? @_@
+// 				title: "Confirm Order",
+// 				razorpayKeyId: razorpayKeyId,
+// 				paymentDetail : paymentDetail
+// 			})
+// 		} catch (err) {
+// 			// Throw err if failed to save
+// 			if (err) throw err;
+// 		}
+// 	}).catch((err) => {
+// 		// Throw err if failed to create order
+// 		if (err) throw err;
+// 	})
+// });
 
 
 
