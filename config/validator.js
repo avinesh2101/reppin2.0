@@ -1,5 +1,5 @@
 const { check, validationResult } = require("express-validator");
-
+//validators tested and updated
 const userSignUpValidationRules = () => {
   return [
     check("name", "Name is required").not().isEmpty(),
