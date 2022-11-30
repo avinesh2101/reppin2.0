@@ -38,6 +38,7 @@ const cartSchema = new mongoose.Schema({
     ref: "User",
     required: false,
   },
+  //changes in cart.js model add option to move into favourite
   createdAt: {
     type: Date,
     default: Date.now,
